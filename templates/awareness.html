@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing Awareness Training</title>
+    <style>
+        :root {
+            --primary: #007cf0;
+            --secondary: #00dfd8;
+            --text: #2d3748;
+            --light: #f7fafc;
+            --dark: #1a202c;
+            --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            --shadow: 0 10px 30px rgba(0, 124, 240, 0.15);
+            --card-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: linear-gradient(135deg, #f6f9fc 0%, #eef2f7 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px;
+            background: var(--gradient);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+            z-index: 1;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2.5em;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 2;
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2em;
+            margin: 15px 0 0;
+            position: relative;
+            z-index: 2;
+        }
+
+        .content-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .info-box {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 124, 240, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .info-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--gradient);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1;
+        }
+
+        .info-box:hover::before {
+            opacity: 0.05;
+        }
+
+        .info-box h2 {
+            color: var(--primary);
+            margin: 0;
+            font-size: 1.4em;
+            position: relative;
+            z-index: 2;
+        }
+
+        .info-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 800px;
+            margin: auto;
+            border-radius: 24px;
+            padding: 30px;
+            position: relative;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text);
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1;
+            z-index: 2;
+        }
+
+        .close-btn:hover {
+            color: var(--primary);
+        }
+
+        .warning-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .warning-card {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            border-left: 4px solid var(--secondary);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .warning-card h3 {
+            color: var(--primary);
+            font-size: 1.2em;
+            margin: 0 0 15px;
+        }
+
+        .checklist {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .checklist li {
+            padding: 8px 0 8px 30px;
+            position: relative;
+            font-size: 1em;
+        }
+
+        .checklist li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--secondary);
+            font-weight: bold;
+        }
+
+        .quiz-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 124, 240, 0.1);
+            margin-top: 20px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: var(--gradient);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 124, 240, 0.2);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 124, 240, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .header {
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .content-section {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .info-box {
+                padding: 20px;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Phishing Awareness Training</h1>
+            <p>Learn how to identify and prevent phishing attacks</p>
+        </div>
+        
+        <div class="content-section">
+            <div class="info-box" onclick="openModal('phishing-info')">
+                <h2>What is Phishing?</h2>
+            </div>
+
+            <div class="info-box" onclick="openModal('types-info')">
+                <h2>Types of Phishing</h2>
+            </div>
+
+            <div class="info-box" onclick="openModal('protection-info')">
+                <h2>How to Protect Yourself</h2>
+            </div>
+
+            <div class="info-box" onclick="openModal('email-info')">
+                <h2>Email Security</h2>
+            </div>
+
+            <div class="info-box" onclick="openModal('password-info')">
+                <h2>Password Security</h2>
+            </div>
+
+            <div class="info-box" onclick="openModal('victim-info')">
+                <h2>If You're a Victim</h2>
+            </div>
+
+            <div class="info-box" onclick="openModal('quiz-info')">
+                <h2>Test Your Knowledge</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="phishing-info" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('phishing-info')">&times;</button>
+            <h2>What is Phishing?</h2>
+            <p>Phishing is a type of cyber attack where attackers try to trick you into revealing sensitive information like passwords or credit card numbers. They often do this by pretending to be a trustworthy source.</p>
+            
+            <div class="warning-grid">
+                <div class="warning-card">
+                    <h3>Common Signs</h3>
+                    <ul class="checklist">
+                        <li>Urgent or threatening language</li>
+                        <li>Requests for personal information</li>
+                        <li>Suspicious email addresses</li>
+                        <li>Poor grammar and spelling</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="types-info" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('types-info')">&times;</button>
+            <h2>Types of Phishing Attacks</h2>
+            <div class="warning-grid">
+                <div class="warning-card">
+                    <h3>Email Phishing</h3>
+                    <p>Most common type, using fake emails to steal information</p>
+                </div>
+                <div class="warning-card">
+                    <h3>Spear Phishing</h3>
+                    <p>Targeted attacks on specific individuals or organizations</p>
+                </div>
+                <div class="warning-card">
+                    <h3>Whaling</h3>
+                    <p>Targets high-profile executives and important people</p>
+                </div>
+                <div class="warning-card">
+                    <h3>Smishing</h3>
+                    <p>Phishing attacks via SMS text messages</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="protection-info" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('protection-info')">&times;</button>
+            <h2>How to Protect Yourself</h2>
+            <p>Learn the best practices to protect yourself from phishing attacks and keep your information secure.</p>
+            <ul class="checklist">
+                <li>Never click on suspicious links</li>
+                <li>Verify email addresses carefully</li>
+                <li>Use strong, unique passwords</li>
+                <li>Enable two-factor authentication</li>
+                <li>Keep software updated</li>
+                <li>Report suspicious emails</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="email-info" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('email-info')">&times;</button>
+            <h2>Email Security Best Practices</h2>
+            <div class="warning-grid">
+                <div class="warning-card">
+                    <h3>Before Clicking</h3>
+                    <ul class="checklist">
+                        <li>Hover over links to check URLs</li>
+                        <li>Verify sender's email address</li>
+                        <li>Check for spelling errors</li>
+                    </ul>
+                </div>
+                <div class="warning-card">
+                    <h3>When in Doubt</h3>
+                    <ul class="checklist">
+                        <li>Contact the sender directly</li>
+                        <li>Use official company channels</li>
+                        <li>Report suspicious emails</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="password-info" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('password-info')">&times;</button>
+            <h2>Password Security</h2>
+            <div class="warning-grid">
+                <div class="warning-card">
+                    <h3>Strong Password Tips</h3>
+                    <ul class="checklist">
+                        <li>Use at least 12 characters</li>
+                        <li>Mix letters, numbers, and symbols</li>
+                        <li>Don't reuse passwords</li>
+                        <li>Use a password manager</li>
+                    </ul>
+                </div>
+                <div class="warning-card">
+                    <h3>Password Protection</h3>
+                    <ul class="checklist">
+                        <li>Enable 2FA whenever possible</li>
+                        <li>Change passwords regularly</li>
+                        <li>Never share passwords</li>
+                        <li>Use unique passwords for each account</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="victim-info" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('victim-info')">&times;</button>
+            <h2>What to Do If You're a Victim</h2>
+            <div class="warning-grid">
+                <div class="warning-card">
+                    <h3>Immediate Actions</h3>
+                    <ul class="checklist">
+                        <li>Change all passwords immediately</li>
+                        <li>Contact your bank if financial info was shared</li>
+                        <li>Enable 2FA on all accounts</li>
+                        <li>Report the incident to IT security</li>
+                    </ul>
+                </div>
+                <div class="warning-card">
+                    <h3>Follow-up Steps</h3>
+                    <ul class="checklist">
+                        <li>Monitor accounts for suspicious activity</li>
+                        <li>Check credit reports</li>
+                        <li>Update security settings</li>
+                        <li>Learn from the experience</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="quiz-info" class="modal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('quiz-info')">&times;</button>
+            <h2>Test Your Knowledge</h2>
+            <div class="quiz-section">
+                <h3>Quick Quiz</h3>
+                <p>Test your understanding of phishing awareness with our interactive quiz. This quiz will help you identify different types of phishing attempts and learn how to protect yourself.</p>
+                <div class="quiz-features">
+                    <ul class="checklist">
+                        <li>Multiple choice questions</li>
+                        <li>Real-world scenarios</li>
+                        <li>Instant feedback</li>
+                        <li>Score tracking</li>
+                    </ul>
+                </div>
+                <a href="/quiz" class="btn">Start Quiz</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const modals = document.querySelectorAll('.modal.active');
+                modals.forEach(modal => {
+                    modal.classList.remove('active');
+                });
+                document.body.style.overflow = 'auto';
+            }
+        });
+    </script>
+</body>
+</html>

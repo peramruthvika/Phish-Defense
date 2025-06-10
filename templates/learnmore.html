@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learn More About Phishing</title>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<style>
+        :root {
+            --primary-color: linear-gradient(to right, #007cf0, #00dfd8);
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+            --text-color: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: var(--text-color);
+            line-height: 1.6;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(52, 152, 219, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 223, 216, 0.05) 0%, transparent 50%),
+                linear-gradient(45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%),
+                linear-gradient(-45deg, rgba(255, 255, 255, 0.1) 25%, transparent 25%);
+            background-size: 100% 100%, 100% 100%, 60px 60px, 60px 60px;
+            z-index: -1;
+        }
+
+        .navbar {
+            background: var(--primary-color);
+            padding: 1.5rem 0;
+    text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .navbar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%),
+                        linear-gradient(-45deg, rgba(255,255,255,0.1) 25%, transparent 25%);
+            background-size: 60px 60px;
+            opacity: 0.1;
+        }
+
+        .navbar h1 {
+            color: white;
+            font-size: 2rem;
+    display: flex;
+    align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            position: relative;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: var(--primary-color);
+        }
+
+        .section h2 {
+            color: var(--secondary-color);
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(52, 152, 219, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .section h2 i {
+            background: var(--primary-color);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 1.8rem;
+        }
+
+        .section p {
+            margin-bottom: 1rem;
+            color: #444;
+        }
+
+        .example-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .example-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(52, 152, 219, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .example-card::before {
+            content: '';
+            position: absolute;
+    top: 0;
+    left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary-color);
+        }
+
+        .example-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .example-card h3 {
+            color: var(--secondary-color);
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            display: flex;
+    align-items: center;
+            gap: 10px;
+        }
+
+        .example-card p {
+            margin-bottom: 0.5rem;
+        }
+
+        .impact {
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+
+        .feature-list {
+            list-style: none;
+            margin: 1.5rem 0;
+        }
+
+        .feature-list li {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(52, 152, 219, 0.1);
+    position: relative;
+            padding-left: 3rem;
+        }
+
+        .feature-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 1rem;
+            color: var(--secondary-color);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .feature-list li:hover {
+            transform: translateX(10px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .myth-section {
+            background: rgba(248, 249, 250, 0.8);
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            border: 1px solid rgba(52, 152, 219, 0.1);
+        }
+
+        .myth-section h3 {
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+        }
+
+        .myth-list {
+            list-style: none;
+        }
+
+        .myth-list li {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+            border: 1px solid rgba(52, 152, 219, 0.1);
+        }
+
+        .myth-list li:hover {
+            transform: translateX(10px);
+        }
+
+        .myth-list li strong {
+            color: var(--secondary-color);
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: var(--primary-color);
+    color: white;
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                120deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            transition: 0.5s;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+        }
+
+        .cta-button:hover::before {
+            left: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 1rem;
+            }
+
+            .section {
+                padding: 1.5rem;
+            }
+
+            .example-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .section h2 {
+                font-size: 1.6rem;
+            }
+  }
+</style>
+</head>
+<body>
+    <div class="navbar">
+        <h1><i class="fas fa-shield-alt"></i> ThreatGuard</h1>
+    </div>
+
+<div class="container">
+        <div class="section">
+            <h2><i class="fas fa-shield-alt"></i> Advanced Phishing Prevention</h2>
+            <p>While understanding phishing types is important, knowing how to prevent and respond to these attacks is crucial. Here are advanced strategies and best practices to protect yourself and your organization:</p>
+            
+            <div class="example-grid">
+                <div class="example-card">
+                    <h3>Email Security Best Practices</h3>
+                    <p>• Use email authentication protocols (SPF, DKIM, DMARC)<br>
+                    • Implement email filtering and scanning<br>
+                    • Regular security awareness training<br>
+                    • Multi-factor authentication for email accounts</p>
+                </div>
+                <div class="example-card">
+                    <h3>Technical Safeguards</h3>
+                    <p>• Keep all software and systems updated<br>
+                    • Use reputable antivirus and anti-malware solutions<br>
+                    • Implement web filtering and content scanning<br>
+                    • Regular security audits and penetration testing</p>
+                </div>
+                <div class="example-card">
+                    <h3>Response Protocols</h3>
+                    <p>• Immediate incident response plan<br>
+                    • Clear reporting procedures<br>
+                    • Regular backup of critical data<br>
+                    • Documented recovery procedures</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2><i class="fas fa-chart-line"></i> Phishing Statistics & Trends</h2>
+            <div class="myth-section">
+                <h3>Current Landscape</h3>
+                <ul class="myth-list">
+                    <li>
+                        <strong>Rising Costs</strong>
+                        <p>Phishing attacks cost organizations an average of $4.65 million per incident in 2023, a 15% increase from the previous year.</p>
+                    </li>
+                    <li>
+                        <strong>Attack Frequency</strong>
+                        <p>83% of organizations reported experiencing phishing attacks in 2023, with an average of 1,185 attacks per organization.</p>
+                    </li>
+                    <li>
+                        <strong>Success Rate</strong>
+                        <p>Despite awareness, 3.4% of employees still fall for phishing attempts, highlighting the need for continuous training.</p>
+                    </li>
+                </ul>
+            </div>
+  </div>
+
+        <div class="section">
+            <h2><i class="fas fa-tools"></i> Advanced Detection Techniques</h2>
+            <ul class="feature-list">
+                <li><strong>Behavioral Analysis:</strong> Our system monitors user behavior patterns to detect anomalies that might indicate a phishing attempt.</li>
+                <li><strong>Machine Learning Models:</strong> Advanced AI algorithms that learn from new phishing patterns and adapt to emerging threats.</li>
+                <li><strong>Real-time URL Analysis:</strong> Deep scanning of URLs to detect malicious content, even in newly created domains.</li>
+                <li><strong>Email Header Analysis:</strong> Comprehensive examination of email headers to identify spoofing attempts and suspicious routing.</li>
+    </ul>
+  </div>
+
+        <div class="section">
+            <h2><i class="fas fa-user-shield"></i> Organizational Protection</h2>
+            <p>Protecting your organization requires a multi-layered approach:</p>
+            <div class="myth-section">
+                <h3>Key Implementation Steps</h3>
+                <ul class="myth-list">
+                    <li>
+                        <strong>1. Security Policy Development</strong>
+                        <p>Create comprehensive security policies covering email usage, password management, and incident response.</p>
+                    </li>
+                    <li>
+                        <strong>2. Regular Training Programs</strong>
+                        <p>Implement ongoing security awareness training with simulated phishing exercises and performance tracking.</p>
+      </li>
+      <li>
+                        <strong>3. Technical Controls</strong>
+                        <p>Deploy advanced security solutions including email filtering, web protection, and endpoint security.</p>
+      </li>
+      <li>
+                        <strong>4. Incident Response Planning</strong>
+                        <p>Develop and regularly test incident response procedures to minimize damage from successful attacks.</p>
+      </li>
+    </ul>
+  </div>
+</div>
+
+        <div class="section">
+            <h2><i class="fas fa-rocket"></i> Get Started</h2>
+            <p>Ready to implement advanced phishing protection for your organization? Our comprehensive solution combines cutting-edge technology with proven security practices.</p>
+            <a href="/detection" class="cta-button">Start Protecting Now</a>
+  </div>
+</div>
+</body>
+</html>

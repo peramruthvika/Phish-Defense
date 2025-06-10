@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing Quiz - Test Your Knowledge</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(to right, #007cf0, #00dfd8);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .quiz-container {
+            max-width: 800px;
+            width: 90%;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .quiz-container:hover {
+            transform: translateY(-5px);
+        }
+
+        h2 {
+            text-align: center;
+            color: #007cf0;
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .question {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 15px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .question:hover {
+            border-color: #007cf0;
+            box-shadow: 0 5px 15px rgba(0, 124, 240, 0.1);
+        }
+
+        .question h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .options {
+            display: grid;
+            gap: 12px;
+        }
+
+        .option {
+            padding: 12px 15px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            color: #4a5568;
+        }
+
+        .option:hover {
+            border-color: #007cf0;
+            background: #f0f7ff;
+        }
+
+        .option.selected {
+            border-color: #007cf0;
+            background: #e6f3ff;
+        }
+
+        .option.correct {
+            border-color: #48bb78;
+            background: #f0fff4;
+        }
+
+        .option.incorrect {
+            border-color: #e53e3e;
+            background: #fff5f5;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(to right, #007cf0, #00dfd8);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 124, 240, 0.4);
+        }
+
+        button:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .result {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .result.success {
+            background: #f0fff4;
+            color: #2f855a;
+            border: 2px solid #48bb78;
+        }
+
+        .result.error {
+            background: #fff5f5;
+            color: #c53030;
+            border: 2px solid #e53e3e;
+        }
+
+        .explanation {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            display: none;
+        }
+
+        .explanation h4 {
+            color: #007cf0;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .explanation p {
+            color: #4a5568;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(to right, #007cf0, #00dfd8);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .quiz-container {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .timer {
+            text-align: center;
+            color: #4a5568;
+            font-size: 16px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .timer.warning {
+            color: #e53e3e;
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <h2>Phishing Awareness Quiz</h2>
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+        <div class="timer" id="timer">Time remaining: 5:00</div>
+        
+        <div id="quiz">
+            <!-- Questions will be dynamically inserted here -->
+        </div>
+
+        <button id="submit" onclick="submitQuiz()">Submit Quiz</button>
+        
+        <div id="result" class="result"></div>
+        <div id="explanation" class="explanation"></div>
+    </div>
+
+    <script>
+        let currentQuestion = 0;
+        let score = 0;
+        let timeLeft = 300; // 5 minutes in seconds
+        let timerInterval;
+
+        const questions = [
+            {
+                question: "Which of the following is a common sign of a phishing email?",
+                options: [
+                    "Urgent request for personal information",
+                    "Professional company logo",
+                    "Proper grammar and spelling",
+                    "Familiar sender name"
+                ],
+                correct: 0,
+                explanation: "Phishing emails often create a sense of urgency to pressure victims into acting quickly without thinking. Legitimate companies rarely ask for personal information via email."
+            },
+            {
+                question: "What should you do if you receive a suspicious email asking for your password?",
+                options: [
+                    "Reply with your password",
+                    "Click any links in the email",
+                    "Forward it to your IT department",
+                    "Ignore it and delete it"
+                ],
+                correct: 2,
+                explanation: "Forwarding suspicious emails to your IT department helps them identify and block potential threats, protecting other employees."
+            },
+            {
+                question: "Which URL is most likely to be a phishing attempt?",
+                options: [
+                    "https://www.paypal.com",
+                    "https://www.paypa1.com",
+                    "https://www.paypal.com/security",
+                    "https://www.paypal.com/login"
+                ],
+                correct: 1,
+                explanation: "The URL 'paypa1.com' uses the number '1' instead of 'l' to mimic PayPal's legitimate domain. This is a common phishing technique."
+            },
+            {
+                question: "What is the safest way to verify if an email is legitimate?",
+                options: [
+                    "Click the links in the email",
+                    "Call the company using a known phone number",
+                    "Reply to the email",
+                    "Forward it to friends to check"
+                ],
+                correct: 1,
+                explanation: "Contacting the company directly using a known, legitimate phone number is the safest way to verify an email's authenticity."
+            },
+            {
+                question: "Which of these is NOT a red flag for phishing?",
+                options: [
+                    "Generic greeting",
+                    "Misspelled words",
+                    "Company logo",
+                    "Suspicious attachments"
+                ],
+                correct: 2,
+                explanation: "A company logo alone is not a red flag, as legitimate emails also contain logos. However, phishers often copy legitimate logos to appear authentic."
+            }
+        ];
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                document.getElementById('timer').textContent = `Time remaining: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (timeLeft <= 60) {
+                    document.getElementById('timer').classList.add('warning');
+                }
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    submitQuiz();
+                }
+            }, 1000);
+        }
+
+        function displayQuestion() {
+            const question = questions[currentQuestion];
+            const quizHTML = `
+                <div class="question">
+                    <h3>${currentQuestion + 1}. ${question.question}</h3>
+                    <div class="options">
+                        ${question.options.map((option, index) => `
+                            <div class="option" onclick="selectOption(${index})">
+                                ${option}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            document.getElementById('quiz').innerHTML = quizHTML;
+            updateProgress();
+        }
+
+        function selectOption(index) {
+            const options = document.getElementsByClassName('option');
+            for (let option of options) {
+                option.classList.remove('selected');
+            }
+            options[index].classList.add('selected');
+        }
+
+        function updateProgress() {
+            const progress = ((currentQuestion + 1) / questions.length) * 100;
+            document.getElementById('progress').style.width = `${progress}%`;
+        }
+
+        function submitQuiz() {
+            clearInterval(timerInterval);
+            const selectedOption = document.querySelector('.option.selected');
+            if (!selectedOption) {
+                alert('Please select an answer!');
+                return;
+            }
+
+            const selectedIndex = Array.from(selectedOption.parentElement.children).indexOf(selectedOption);
+            const question = questions[currentQuestion];
+            
+            // Show correct/incorrect styling
+            const options = document.getElementsByClassName('option');
+            options[question.correct].classList.add('correct');
+            if (selectedIndex !== question.correct) {
+                selectedOption.classList.add('incorrect');
+            }
+
+            // Update score
+            if (selectedIndex === question.correct) {
+                score++;
+            }
+
+            // Show explanation
+            const explanation = document.getElementById('explanation');
+            explanation.style.display = 'block';
+            explanation.innerHTML = `
+                <h4>Explanation:</h4>
+                <p>${question.explanation}</p>
+            `;
+
+            // Disable options
+            for (let option of options) {
+                option.style.pointerEvents = 'none';
+            }
+
+            // Update button
+            const submitButton = document.getElementById('submit');
+            if (currentQuestion < questions.length - 1) {
+                submitButton.textContent = 'Next Question';
+                submitButton.onclick = nextQuestion;
+            } else {
+                showFinalScore();
+            }
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            displayQuestion();
+            document.getElementById('explanation').style.display = 'none';
+            const submitButton = document.getElementById('submit');
+            submitButton.textContent = 'Submit Quiz';
+            submitButton.onclick = submitQuiz;
+        }
+
+        function showFinalScore() {
+            const result = document.getElementById('result');
+            result.style.display = 'block';
+            result.classList.add(score >= 4 ? 'success' : 'error');
+            result.textContent = `Quiz completed! Your score: ${score}/${questions.length}`;
+            
+            const submitButton = document.getElementById('submit');
+            submitButton.style.display = 'none';
+        }
+
+        // Start the quiz
+        displayQuestion();
+        startTimer();
+    </script>
+</body>
+</html>

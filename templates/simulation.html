@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThreatGuard | Phishing Simulation</title>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <style>
+        :root {
+            --primary-color: linear-gradient(to right, #007cf0, #00dfd8);
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+            --text-color: #333;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f9f9f9;
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            width: 100%;
+            background: var(--primary-color);
+            padding: 20px 0;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar h1 {
+            margin: 0;
+            font-size: 2rem;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .simulation-header {
+            text-align: center;
+            margin-bottom: 30px;
+            width: 100%;
+        }
+
+        .simulation-header h2 {
+            color: var(--primary-color);
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+
+        .simulation-header p {
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .simulation-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            width: 100%;
+            margin-bottom: 40px;
+        }
+
+        .simulation-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .simulation-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            background: var(--secondary-color);
+            color: white;
+            padding: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .card-body h3 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+
+        .card-body p {
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-start {
+            background-color: var(--accent-color);
+        }
+
+        .btn-start:hover {
+            background-color: #c0392b;
+        }
+
+        .stats-container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            width: 100%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--light-color);
+            padding-bottom: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 15px;
+            border-radius: 5px;
+            background: var(--light-color);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: var(--dark-color);
+            font-weight: 500;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 800px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .simulation-email {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .email-header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+
+        .email-subject {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .email-from {
+            color: #666;
+        }
+
+        .email-body img {
+            max-width: 100%;
+            height: auto;
+            margin: 10px 0;
+        }
+
+        .simulation-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            justify-content: center;
+        }
+
+        .btn-report {
+            background-color: #2ecc71;
+        }
+
+        .btn-report:hover {
+            background-color: #27ae60;
+        }
+
+        .btn-fell-for-it {
+            background-color: var(--accent-color);
+        }
+
+        .simulation-feedback {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 5px;
+            background-color: var(--light-color);
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .feedback-positive {
+            border-left-color: #2ecc71;
+        }
+
+        .feedback-negative {
+            border-left-color: var(--accent-color);
+        }
+
+        @media (max-width: 768px) {
+            .simulation-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 15px;
+            }
+
+            .simulation-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <h1><i class="fas fa-shield-alt"></i> ThreatGuard</h1>
+    </div>
+
+    <div class="main-container">
+        <div class="simulation-header">
+            <h2><i class="fas fa-user-graduate"></i> Phishing Simulation Training</h2>
+            <p>Test your ability to identify sophisticated phishing attempts with our realistic simulations.</p>
+        </div>
+
+        <div class="simulation-cards">
+            <!-- Email Phishing Card -->
+            <div class="simulation-card">
+                <div class="card-header">
+                    <i class="fas fa-envelope"></i> Email Phishing
+                </div>
+                <div class="card-body">
+                    <h3>Urgent Password Reset</h3>
+                    <p>Simulates a credential harvesting attack with a fake password reset request mimicking your IT department.</p>
+                    <button onclick="startSimulation('email')" class="btn btn-start"><i class="fas fa-play"></i> Start Simulation</button>
+                </div>
+            </div>
+
+            <!-- URL Phishing Card -->
+            <div class="simulation-card">
+                <div class="card-header" style="background: #9b59b6;">
+                    <i class="fas fa-link"></i> URL Deception
+                </div>
+                <div class="card-body">
+                    <h3>Fake Login Portal</h3>
+                    <p>Tests your ability to spot suspicious URLs that mimic your company's login portal.</p>
+                    <button onclick="startSimulation('url')" class="btn btn-start"><i class="fas fa-play"></i> Start Simulation</button>
+                </div>
+            </div>
+
+            <!-- Attachment Card -->
+            <div class="simulation-card">
+                <div class="card-header" style="background: #e67e22;">
+                    <i class="fas fa-file-alt"></i> Attachment Scam
+                </div>
+                <div class="card-body">
+                    <h3>Fake Invoice</h3>
+                    <p>Simulates emails with dangerous attachments disguised as urgent invoices.</p>
+                    <button onclick="startSimulation('attachment')" class="btn btn-start"><i class="fas fa-play"></i> Start Simulation</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Container -->
+        <div class="stats-container">
+            <div class="stats-header">
+                <h2><i class="fas fa-chart-bar"></i> Simulation Statistics</h2>
+                <button onclick="refreshStats()" class="btn"><i class="fas fa-sync-alt"></i> Refresh Stats</button>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Simulations Run</div>
+                    <div class="stat-value" id="total-simulations">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Success Rate</div>
+                    <div class="stat-value" id="success-rate">0%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Most Recent</div>
+                    <div class="stat-value" id="most-recent">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Most Common Type</div>
+                    <div class="stat-value" id="common-type">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule Form -->
+        <div class="container" style="width: 100%;">
+            <h2><i class="fas fa-calendar-alt"></i> Schedule New Simulation</h2>
+            <form id="schedule-form" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                    <label for="simulation-type">Simulation Type</label>
+                    <select id="simulation-type" name="simulation_type" required style="width: 100%; padding: 12px; border-radius: 5px; border: 1px solid #ddd;">
+                        <option value="email">Email Phishing</option>
+                        <option value="url">URL Deception</option>
+                        <option value="attachment">Attachment Scam</option>
+                        <option value="ceo">CEO Fraud</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="target-group">Target Group</label>
+                    <select id="target-group" name="target_group" required style="width: 100%; padding: 12px; border-radius: 5px; border: 1px solid #ddd;">
+                        <option value="all">All Employees</option>
+                        <option value="executives">Executive Team</option>
+                        <option value="finance">Finance Department</option>
+                        <option value="it">IT Department</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="launch-date">Launch Date</label>
+                    <input type="date" id="launch-date" name="launch_date" required style="width: 100%; padding: 12px; border-radius: 5px; border: 1px solid #ddd;">
+                </div>
+                <div class="form-group">
+                    <label for="completion-date">Completion Date</label>
+                    <input type="date" id="completion-date" name="completion_date" required style="width: 100%; padding: 12px; border-radius: 5px; border: 1px solid #ddd;">
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <button type="submit" class="btn" style="width: 200px; margin-top: 10px;"><i class="fas fa-calendar-check"></i> Schedule Simulation</button>
+                </div>
+            </form>
+        </div>
+        <!-- Scheduled Simulations Table -->
+        <div class="container" style="width: 100%; margin-top: 30px;">
+            <h2><i class="fas fa-list"></i> Scheduled Simulations</h2>
+            <table id="scheduled-table" style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+                <thead style="background: #f4f8fb;">
+                    <tr>
+                        <th style="padding: 12px; border-bottom: 1px solid #eee;">Type</th>
+                        <th style="padding: 12px; border-bottom: 1px solid #eee;">Target Group</th>
+                        <th style="padding: 12px; border-bottom: 1px solid #eee;">Launch Date</th>
+                        <th style="padding: 12px; border-bottom: 1px solid #eee;">Completion Date</th>
+                        <th style="padding: 12px; border-bottom: 1px solid #eee;">Scheduled At</th>
+                        <th style="padding: 12px; border-bottom: 1px solid #eee;">Triggered</th>
+                        <th style="padding: 12px; border-bottom: 1px solid #eee;">Triggered At</th>
+                    </tr>
+                </thead>
+                <tbody id="scheduled-tbody">
+                    <tr><td colspan="7" style="text-align:center; color:#888;">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Email Simulation Modal -->
+    <div id="emailSimulation" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h2><i class="fas fa-envelope"></i> Email Simulation</h2>
+            
+            <div class="simulation-email">
+                <div class="email-header">
+                    <div class="email-from">From: IT Support &lt;support@yourcompany.com&gt;</div>
+                    <div class="email-subject">Urgent: Your Password Expires in 24 Hours</div>
+                </div>
+                <div class="email-body">
+                    <p>Dear Employee,</p>
+                    <p>Our records indicate that your password will expire in the next 24 hours. To avoid account suspension, please reset your password immediately by clicking the link below:</p>
+                    <p><a href="#" id="phishingLink" style="color: var(--secondary-color);">https://login-yourcompany-reset.com</a></p>
+                    <p>If you don't reset your password, your account will be temporarily suspended.</p>
+                    <p>Best regards,<br>IT Support Team</p>
+                </div>
+            </div>
+
+            <div class="simulation-actions">
+                <button onclick="reportPhishing('email')" class="btn btn-report"><i class="fas fa-flag"></i> Report as Phishing</button>
+                <button onclick="fellForPhishing('email')" class="btn btn-fell-for-it"><i class="fas fa-exclamation-triangle"></i> I Clicked the Link</button>
+            </div>
+
+            <div id="emailFeedback" class="simulation-feedback">
+                <h3><i class="fas fa-lightbulb"></i> Training Feedback</h3>
+                <div id="emailFeedbackContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- URL Simulation Modal -->
+    <div id="urlSimulation" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h2><i class="fas fa-link"></i> URL Simulation</h2>
+            
+            <div class="simulation-email">
+                <div class="email-header">
+                    <div class="email-from">From: HR Department &lt;hr@yourcompany.com&gt;</div>
+                    <div class="email-subject">Important: Update Your Benefits</div>
+                </div>
+                <div class="email-body">
+                    <p>Hello,</p>
+                    <p>Please review and update your employee benefits before the deadline tomorrow. Click below to access the portal:</p>
+                    <p><a href="#" id="fakePortalLink" style="color: var(--secondary-color);">https://yourcompany-benefits.info</a></p>
+                    <img src="https://via.placeholder.com/600x200?text=Fake+Benefits+Portal+Preview" alt="Fake benefits portal preview" style="border: 1px solid #ddd;">
+                    <p>All employees must complete this before the deadline.</p>
+                    <p>HR Department</p>
+                </div>
+            </div>
+
+            <div class="simulation-actions">
+                <button onclick="reportPhishing('url')" class="btn btn-report"><i class="fas fa-flag"></i> Report as Phishing</button>
+                <button onclick="fellForPhishing('url')" class="btn btn-fell-for-it"><i class="fas fa-exclamation-triangle"></i> I Would Have Clicked</button>
+            </div>
+
+            <div id="urlFeedback" class="simulation-feedback">
+                <h3><i class="fas fa-lightbulb"></i> Training Feedback</h3>
+                <div id="urlFeedbackContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attachment Simulation Modal -->
+    <div id="attachmentSimulation" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h2><i class="fas fa-file-alt"></i> Attachment Simulation</h2>
+            
+            <div class="simulation-email">
+                <div class="email-header">
+                    <div class="email-from">From: Accounting &lt;accounting@yourcompany.com&gt;</div>
+                    <div class="email-subject">Invoice #INV-2023-456 - Payment Required</div>
+                </div>
+                <div class="email-body">
+                    <p>Dear Team,</p>
+                    <p>Please find attached the invoice for your recent order. Payment is due within 7 days to avoid service interruption.</p>
+                    <p>We've attached the invoice for your records. Please open it and follow the payment instructions.</p>
+                    <p><a href="#" id="fakeAttachmentLink" style="color: var(--secondary-color);">Download Invoice (PDF)</a></p>
+                    <p>Thank you for your prompt attention to this matter.</p>
+                    <p>Best regards,<br>Accounts Payable</p>
+                </div>
+            </div>
+
+            <div class="simulation-actions">
+                <button onclick="reportPhishing('attachment')" class="btn btn-report"><i class="fas fa-flag"></i> Report as Suspicious</button>
+                <button onclick="fellForPhishing('attachment')" class="btn btn-fell-for-it"><i class="fas fa-exclamation-triangle"></i> I Downloaded It</button>
+            </div>
+
+            <div id="attachmentFeedback" class="simulation-feedback">
+                <h3><i class="fas fa-lightbulb"></i> Training Feedback</h3>
+                <div id="attachmentFeedbackContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load stats and scheduled simulations when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshStats();
+            loadScheduledSimulations();
+        });
+
+        // Start simulation based on type
+        function startSimulation(type) {
+            if (type === 'email') {
+                document.getElementById('emailSimulation').style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            } else if (type === 'url') {
+                document.getElementById('urlSimulation').style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            } else if (type === 'attachment') {
+                document.getElementById('attachmentSimulation').style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        // Close modal
+        function closeModal() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.style.display = 'none';
+            });
+            document.body.style.overflow = 'auto';
+        }
+
+        // User reports phishing correctly
+        function reportPhishing(type) {
+            const feedbackDiv = document.getElementById(`${type}Feedback`);
+            const contentDiv = document.getElementById(`${type}FeedbackContent`);
+            
+            feedbackDiv.style.display = 'block';
+            feedbackDiv.className = 'simulation-feedback feedback-positive';
+            
+            let feedbackContent = '';
+            
+            if (type === 'email') {
+                feedbackContent = `
+                    <p><strong>Correct!</strong> You identified this as a phishing attempt.</p>
+                    <h4>Red Flags You Spotted:</h4>
+                    <ul>
+                        <li>The sender's email doesn't match our company domain</li>
+                        <li>The URL doesn't match our official portal</li>
+                        <li>Urgent language creating false pressure</li>
+                    </ul>
+                    <p>In a real scenario, you should report this to your IT security team.</p>
+                `;
+            } else if (type === 'url') {
+                feedbackContent = `
+                    <p><strong>Well done!</strong> You recognized this deceptive URL.</p>
+                    <h4>What to look for:</h4>
+                    <ul>
+                        <li>The domain "yourcompany-benefits.info" is not our official domain</li>
+                        <li>Legitimate HR communications come from @yourcompany.com</li>
+                        <li>Benefits updates are never this urgent</li>
+                    </ul>
+                `;
+            } else if (type === 'attachment') {
+                feedbackContent = `
+                    <p><strong>Good catch!</strong> You avoided a potential malware attack.</p>
+                    <h4>Warning signs:</h4>
+                    <ul>
+                        <li>Unexpected invoices should always be verified</li>
+                        <li>Our accounting department uses a different email format</li>
+                        <li>Attachments from unknown senders are high-risk</li>
+                    </ul>
+                `;
+            }
+            
+            contentDiv.innerHTML = feedbackContent;
+            logSimulationResult(type, 'success', 'reported');
+        }
+
+        // User falls for phishing
+        function fellForPhishing(type) {
+            const feedbackDiv = document.getElementById(`${type}Feedback`);
+            const contentDiv = document.getElementById(`${type}FeedbackContent`);
+            
+            feedbackDiv.style.display = 'block';
+            feedbackDiv.className = 'simulation-feedback feedback-negative';
+            
+            let feedbackContent = '';
+            
+            if (type === 'email') {
+                feedbackContent = `
+                    <p><strong>This was a phishing simulation!</strong></p>
+                    <h4>Here's what you missed:</h4>
+                    <ul>
+                        <li>The domain name is incorrect (login-yourcompany-reset.com)</li>
+                        <li>Legitimate communications won't pressure you with urgent deadlines</li>
+                        <li>Always verify unexpected password reset requests</li>
+                    </ul>
+                    <p>In a real scenario, this could have compromised your credentials.</p>
+                `;
+            } else if (type === 'url') {
+                feedbackContent = `
+                    <p><strong>This was a simulated phishing attempt!</strong></p>
+                    <h4>Key indicators you missed:</h4>
+                    <ul>
+                        <li>The domain "yourcompany-benefits.info" is not our company's domain</li>
+                        <li>HR communications always come from @yourcompany.com addresses</li>
+                        <li>Benefits updates are announced through official channels</li>
+                    </ul>
+                `;
+            } else if (type === 'attachment') {
+                feedbackContent = `
+                    <p><strong>This attachment was simulated malware!</strong></p>
+                    <h4>What to watch for:</h4>
+                    <ul>
+                        <li>Always verify unexpected attachments with the sender</li>
+                        <li>Check the sender's email address carefully</li>
+                        <li>Our accounting department never sends PDF invoices directly</li>
+                    </ul>
+                `;
+            }
+            
+            contentDiv.innerHTML = feedbackContent;
+            logSimulationResult(type, 'failure', 'fell_for_it');
+        }
+
+        // Log simulation results to backend
+        function logSimulationResult(type, outcome, action) {
+            fetch('/log_simulation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    type: type,
+                    outcome: outcome,
+                    action: action
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Simulation logged:', data);
+                refreshStats(); // Update stats after logging
+            })
+            .catch(error => {
+                console.error('Error logging simulation:', error);
+            });
+        }
+
+        // Refresh statistics from backend
+        function refreshStats() {
+            fetch('/get_simulation_stats')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('total-simulations').textContent = data.total_simulations || 0;
+                document.getElementById('success-rate').textContent = data.success_rate ? `${data.success_rate}%` : '0%';
+                document.getElementById('most-recent').textContent = data.most_recent || '-';
+                document.getElementById('common-type').textContent = data.common_type || '-';
+            })
+            .catch(error => {
+                console.error('Error fetching stats:', error);
+            });
+        }
+
+        // Fetch and display scheduled simulations
+        function loadScheduledSimulations() {
+            fetch('/get_scheduled_simulations')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('scheduled-tbody');
+                    tbody.innerHTML = '';
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#888;">No scheduled simulations.</td></tr>';
+                        return;
+                    }
+                    data.forEach(sim => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td style=\"padding: 10px; border-bottom: 1px solid #eee;\">${sim.type}</td>
+                            <td style=\"padding: 10px; border-bottom: 1px solid #eee;\">${sim.target_group}</td>
+                            <td style=\"padding: 10px; border-bottom: 1px solid #eee;\">${sim.launch_date}</td>
+                            <td style=\"padding: 10px; border-bottom: 1px solid #eee;\">${sim.completion_date}</td>
+                            <td style=\"padding: 10px; border-bottom: 1px solid #eee;\">${sim.scheduled_at}</td>
+                            <td style=\"padding: 10px; border-bottom: 1px solid #eee; color: ${sim.triggered ? '#2ecc71' : '#e67e22'}; font-weight: bold;\">${sim.triggered ? 'Yes' : 'No'}</td>
+                            <td style=\"padding: 10px; border-bottom: 1px solid #eee;\">${sim.triggered_at ? sim.triggered_at : '-'}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    const tbody = document.getElementById('scheduled-tbody');
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#e74c3c;">Error loading scheduled simulations.</td></tr>';
+                    console.error('Error fetching scheduled simulations:', error);
+                });
+        }
+
+        // Handle schedule form submission
+        document.getElementById('schedule-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData.entries());
+            
+            fetch('/schedule_simulation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Simulation scheduled successfully!');
+                this.reset();
+                loadScheduledSimulations(); // Refresh table
+            })
+            .catch(error => {
+                console.error('Error scheduling simulation:', error);
+                alert('Error scheduling simulation. Please try again.');
+            });
+        });
+
+        // Prevent actual navigation (for demo purposes)
+        document.getElementById('phishingLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            fellForPhishing('email');
+        });
+
+        document.getElementById('fakePortalLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            fellForPhishing('url');
+        });
+
+        document.getElementById('fakeAttachmentLink').addEventListener('click', function(e) {
+            e.preventDefault();
+            fellForPhishing('attachment');
+        });
+
+        // Close modal when clicking outside content
+        window.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal')) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
