@@ -340,7 +340,6 @@
         }
 
         function submitQuiz() {
-            clearInterval(timerInterval);
             const selectedOption = document.querySelector('.option.selected');
             if (!selectedOption) {
                 alert('Please select an answer!');
@@ -381,6 +380,7 @@
                 submitButton.textContent = 'Next Question';
                 submitButton.onclick = nextQuestion;
             } else {
+                clearInterval(timerInterval);
                 showFinalScore();
             }
         }
@@ -392,6 +392,13 @@
             const submitButton = document.getElementById('submit');
             submitButton.textContent = 'Submit Quiz';
             submitButton.onclick = submitQuiz;
+            
+            // Re-enable options for the new question
+            const options = document.getElementsByClassName('option');
+            for (let option of options) {
+                option.style.pointerEvents = 'auto';
+                option.classList.remove('selected', 'correct', 'incorrect');
+            }
         }
 
         function showFinalScore() {

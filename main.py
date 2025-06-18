@@ -116,13 +116,21 @@ class User(UserMixin, db.Model):
 def predict_fake_or_real_email_content(text):
     try:
         prompt = f"""
-You are an expert in identifying scam messages. Analyze the text and classify it as:
+You are a cybersecurity expert skilled in detecting scam or fake messages.
+
+Analyze the following text and classify it clearly as either:
 - Real/Legitimate
 - Scam/Fake
 
+Provide your response in this exact format, using plain text only (no asterisks, bold, or bullet points):
+
+Classification: <Real/Legitimate or Scam/Fake>
+Reason: <Clear and concise explanation, professionally written, without using Markdown formatting>
+
+
 Text: {text}
 
-Return only the classification message.
+Return  the classification message along with reason.
 """
         response = model.generate_content(prompt)
         # Defensive check for response and .text
@@ -139,16 +147,35 @@ Analyze this URL and classify it as:
 2. phishing
 3. malware
 4. defacement
+Provide your response in **plain text only**, using this exact format:
+
+Classification: <One of the four categories>  
+Reason: <Give a clear, short reason for your classification. Always include a reason, even if it seems obvious. Do not use Markdown formatting (no asterisks, bold, or bullet points). Keep it professional and easy to understand.>
+
 
 URL: {url}
 
-Return only the classification.
 """
         response = model.generate_content(prompt)
-        return response.text.strip().lower() if response and hasattr(response, "text") else "unknown"
+        if response and hasattr(response, "text"):
+            # Extract just the classification from the response
+            response_text = response.text.strip().lower()
+            # Look for the classification keywords
+            if "benign" in response_text:
+                return "benign"
+            elif "phishing" in response_text:
+                return "phishing"
+            elif "malware" in response_text:
+                return "malware"
+            elif "defacement" in response_text:
+                return "defacement"
+            else:
+                return "unknown"
+        else:
+            return "unknown"
     except Exception as e:
         logging.error(f"Error detecting URL: {e}")
-        return "Error detecting URL."
+        return "error"
 
 # Routes
 
@@ -189,7 +216,7 @@ def log_simulation():
     try:
         data = request.json
         print('Received log_simulation POST:', data)
-        sim_result = SimulationResult(
+        sim_result = SimulationResult(  # type: ignore
             sim_type=data.get('type'),
             outcome=data.get('outcome'),
             action=data.get('action'),
