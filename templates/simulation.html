@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ThreatGuard | Phishing Simulation</title>
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <style>
         :root {
             --primary-color: linear-gradient(to right, #007cf0, #00dfd8);
@@ -404,6 +403,18 @@
                     <div class="stat-label">Most Common Type</div>
                     <div class="stat-value" id="common-type">-</div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-label">Emails Sent</div>
+                    <div class="stat-value" id="total-emails-sent">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Emails Opened</div>
+                    <div class="stat-value" id="total-emails-opened">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Email Open Rate</div>
+                    <div class="stat-value" id="email-open-rate">0%</div>
+                </div>
             </div>
         </div>
 
@@ -430,6 +441,10 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="notification-email">Notification Email</label>
+                    <input type="email" id="notification-email" name="notification_email" required placeholder="Enter email to receive notification" style="width: 100%; padding: 12px; border-radius: 5px; border: 1px solid #ddd;">
+                </div>
+                <div class="form-group">
                     <label for="launch-date">Launch Date</label>
                     <input type="date" id="launch-date" name="launch_date" required style="width: 100%; padding: 12px; border-radius: 5px; border: 1px solid #ddd;">
                 </div>
@@ -450,15 +465,16 @@
                     <tr>
                         <th style="padding: 12px; border-bottom: 1px solid #eee;">Type</th>
                         <th style="padding: 12px; border-bottom: 1px solid #eee;">Target Group</th>
+                        <th style="padding: 12px; border-bottom: 1px solid #eee;">Notification Email</th>
                         <th style="padding: 12px; border-bottom: 1px solid #eee;">Launch Date</th>
                         <th style="padding: 12px; border-bottom: 1px solid #eee;">Completion Date</th>
                         <th style="padding: 12px; border-bottom: 1px solid #eee;">Scheduled At</th>
-                        <th style="padding: 12px; border-bottom: 1px solid #eee;">Triggered</th>
-                        <th style="padding: 12px; border-bottom: 1px solid #eee;">Triggered At</th>
+                        <th style="padding: 12px; border-bottom: 1px solid #eee;">Email Opened</th>
+                        <th style="padding: 12px; border-bottom: 1px solid #eee;">Opened At</th>
                     </tr>
                 </thead>
                 <tbody id="scheduled-tbody">
-                    <tr><td colspan="7" style="text-align:center; color:#888;">Loading...</td></tr>
+                    <tr><td colspan="8" style="text-align:center; color:#888;">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -511,7 +527,6 @@
                     <p>Hello,</p>
                     <p>Please review and update your employee benefits before the deadline tomorrow. Click below to access the portal:</p>
                     <p><a href="#" id="fakePortalLink" style="color: var(--secondary-color);">https://yourcompany-benefits.info</a></p>
-                    <img src="https://via.placeholder.com/600x200?text=Fake+Benefits+Portal+Preview" alt="Fake benefits portal preview" style="border: 1px solid #ddd;">
                     <p>All employees must complete this before the deadline.</p>
                     <p>HR Department</p>
                 </div>
@@ -563,11 +578,15 @@
     </div>
 
     <script>
-        // Load stats and scheduled simulations when page loads
-        document.addEventListener('DOMContentLoaded', function() {
+        // Load initial data
+        refreshStats();
+        loadScheduledSimulations();
+        
+        // Auto-refresh data every 30 seconds
+        setInterval(() => {
             refreshStats();
             loadScheduledSimulations();
-        });
+        }, 30000); // 30 seconds
 
         // Start simulation based on type
         function startSimulation(type) {
@@ -717,6 +736,9 @@
                 document.getElementById('success-rate').textContent = data.success_rate ? `${data.success_rate}%` : '0%';
                 document.getElementById('most-recent').textContent = data.most_recent || '-';
                 document.getElementById('common-type').textContent = data.common_type || '-';
+                document.getElementById('total-emails-sent').textContent = data.total_emails_sent || 0;
+                document.getElementById('total-emails-opened').textContent = data.total_emails_opened || 0;
+                document.getElementById('email-open-rate').textContent = data.email_open_rate ? `${data.email_open_rate}%` : '0%';
             })
             .catch(error => {
                 console.error('Error fetching stats:', error);
@@ -726,12 +748,25 @@
         // Fetch and display scheduled simulations
         function loadScheduledSimulations() {
             fetch('/get_scheduled_simulations')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     const tbody = document.getElementById('scheduled-tbody');
                     tbody.innerHTML = '';
+                    
+                    // Check if data is an array
+                    if (!Array.isArray(data)) {
+                        console.error('Expected array but got:', data);
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#e74c3c;">Error: Invalid data format from server.</td></tr>';
+                        return;
+                    }
+                    
                     if (data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#888;">No scheduled simulations.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#888;">No scheduled simulations.</td></tr>';
                         return;
                     }
                     data.forEach(sim => {
@@ -739,18 +774,19 @@
                         row.innerHTML = `
                             <td style=\"padding: 10px; border-bottom: 1px solid #eee;\">${sim.type}</td>
                             <td style=\"padding: 10px; border-bottom: 1px solid #eee;\">${sim.target_group}</td>
+                            <td style=\"padding: 10px; border-bottom: 1px solid #eee;\">${sim.notification_email}</td>
                             <td style=\"padding: 10px; border-bottom: 1px solid #eee;\">${sim.launch_date}</td>
                             <td style=\"padding: 10px; border-bottom: 1px solid #eee;\">${sim.completion_date}</td>
                             <td style=\"padding: 10px; border-bottom: 1px solid #eee;\">${sim.scheduled_at}</td>
-                            <td style=\"padding: 10px; border-bottom: 1px solid #eee; color: ${sim.triggered ? '#2ecc71' : '#e67e22'}; font-weight: bold;\">${sim.triggered ? 'Yes' : 'No'}</td>
-                            <td style=\"padding: 10px; border-bottom: 1px solid #eee;\">${sim.triggered_at ? sim.triggered_at : '-'}</td>
+                            <td style=\"padding: 10px; border-bottom: 1px solid #eee; color: ${sim.email_opened ? '#2ecc71' : '#e67e22'}; font-weight: bold;\">${sim.email_opened ? 'Yes' : 'No'}</td>
+                            <td style=\"padding: 10px; border-bottom: 1px solid #eee;\">${sim.email_opened_at ? sim.email_opened_at : '-'}</td>
                         `;
                         tbody.appendChild(row);
                     });
                 })
                 .catch(error => {
                     const tbody = document.getElementById('scheduled-tbody');
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#e74c3c;">Error loading scheduled simulations.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#e74c3c;">Error loading scheduled simulations: ' + error.message + '</td></tr>';
                     console.error('Error fetching scheduled simulations:', error);
                 });
         }

@@ -1,9 +1,9 @@
-from flask import Flask, render_template, request, jsonify, url_for, redirect
+from flask import Flask, render_template, request, jsonify, url_for, redirect, send_file
 import google.generativeai as genai
 import os
 import PyPDF2
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
@@ -15,6 +15,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_migrate import Migrate
 import re
+import io
 
 load_dotenv()
 
@@ -38,12 +39,13 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///phishing.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Flask-Mail configuration (demo values, replace with real credentials)
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'donaldmini10@gmail.com'  # Replace with your email
-app.config['MAIL_PASSWORD'] = 'oeuv osur uwzf smnh'     # Replace with your app password
-app.config['MAIL_DEFAULT_SENDER'] = 'donaldmini10@gmail.com'
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True') == 'True'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+
 
 mail = Mail(app)
 
@@ -59,7 +61,7 @@ class SimulationResult(db.Model):
     sim_type = db.Column(db.String(100), nullable=False)
     outcome = db.Column(db.String(20), nullable=False)  # 'success' or 'failure'
     action = db.Column(db.String(20), nullable=False)   # 'reported' or 'fell_for_it'
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
     def to_dict(self):
         IST = pytz.timezone('Asia/Kolkata')
@@ -75,13 +77,20 @@ class ScheduledSimulation(db.Model):
     __tablename__ = 'scheduled_simulations'
 
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     sim_type = db.Column(db.String(100), nullable=False)
     target_group = db.Column(db.String(200), nullable=False)
     launch_date = db.Column(db.Date, nullable=False)
     completion_date = db.Column(db.Date, nullable=False)
-    scheduled_at = db.Column(db.DateTime, default=datetime.utcnow)
+    scheduled_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     triggered = db.Column(db.Boolean, default=False)
     triggered_at = db.Column(db.DateTime, nullable=True)
+    notification_email = db.Column(db.String(120), nullable=False)  # Email to receive notification
+    email_opened = db.Column(db.Boolean, default=False)  # Track if email was opened
+    email_opened_at = db.Column(db.DateTime, nullable=True)  # When email was opened
+
+    # Relationship to User
+    user = db.relationship('User', backref='scheduled_simulations')
 
     def to_dict(self):
         IST = pytz.timezone('Asia/Kolkata')
@@ -89,6 +98,7 @@ class ScheduledSimulation(db.Model):
         ist_completion_date = self.completion_date
         ist_scheduled_at = self.scheduled_at.replace(tzinfo=pytz.utc).astimezone(IST)
         ist_triggered_at = self.triggered_at.replace(tzinfo=pytz.utc).astimezone(IST) if self.triggered_at else None
+        ist_email_opened_at = self.email_opened_at.replace(tzinfo=pytz.utc).astimezone(IST) if self.email_opened_at else None
         return {
             'type': self.sim_type,
             'target_group': self.target_group,
@@ -96,13 +106,17 @@ class ScheduledSimulation(db.Model):
             'completion_date': ist_completion_date.strftime("%Y-%m-%d"),
             'scheduled_at': ist_scheduled_at.strftime("%Y-%m-%d %H:%M:%S"),
             'triggered': self.triggered,
-            'triggered_at': ist_triggered_at.strftime("%Y-%m-%d %H:%M:%S") if ist_triggered_at else None
+            'triggered_at': ist_triggered_at.strftime("%Y-%m-%d %H:%M:%S") if ist_triggered_at else None,
+            'notification_email': self.notification_email,
+            'email_opened': self.email_opened,
+            'email_opened_at': ist_email_opened_at.strftime("%Y-%m-%d %H:%M:%S") if ist_email_opened_at else None
         }
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
 
     def set_password(self, password):
@@ -110,6 +124,29 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+class EmailOpen(db.Model):
+    __tablename__ = 'email_opens'
+
+    id = db.Column(db.Integer, primary_key=True)
+    simulation_id = db.Column(db.Integer, db.ForeignKey('scheduled_simulations.id'), nullable=False)
+    opened_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    ip_address = db.Column(db.String(45), nullable=True)  # IPv6 can be up to 45 chars
+    user_agent = db.Column(db.String(500), nullable=True)
+
+    # Relationship to ScheduledSimulation
+    simulation = db.relationship('ScheduledSimulation', backref='email_opens')
+
+    def to_dict(self):
+        IST = pytz.timezone('Asia/Kolkata')
+        ist_opened_at = self.opened_at.replace(tzinfo=pytz.utc).astimezone(IST)
+        return {
+            'id': self.id,
+            'simulation_id': self.simulation_id,
+            'opened_at': ist_opened_at.strftime("%Y-%m-%d %H:%M:%S"),
+            'ip_address': self.ip_address,
+            'user_agent': self.user_agent
+        }
 
 # Helper functions for prediction
 
@@ -220,7 +257,7 @@ def log_simulation():
             sim_type=data.get('type'),
             outcome=data.get('outcome'),
             action=data.get('action'),
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         db.session.add(sim_result)
         db.session.commit()
@@ -254,17 +291,26 @@ def get_simulation_stats():
         else:
             most_recent = "N/A"
 
+        # Email open statistics
+        total_simulations_sent = ScheduledSimulation.query.filter_by(triggered=True).count()
+        total_emails_opened = EmailOpen.query.count()
+        open_rate = round((total_emails_opened / total_simulations_sent) * 100, 1) if total_simulations_sent > 0 else 0
+
         return jsonify({
             'total_simulations': total,
             'success_rate': success_rate,
             'most_recent': most_recent,
-            'common_type': common_type
+            'common_type': common_type,
+            'total_emails_sent': total_simulations_sent,
+            'total_emails_opened': total_emails_opened,
+            'email_open_rate': open_rate
         })
     except Exception as e:
         logging.error(f"Error getting simulation stats: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/schedule_simulation', methods=['POST'])
+@login_required
 def schedule_simulation():
     try:
         data = request.json
@@ -272,11 +318,13 @@ def schedule_simulation():
         completion_date = datetime.strptime(data.get('completion_date'), "%Y-%m-%d").date()
 
         scheduled = ScheduledSimulation(
+            user_id=current_user.id,
             sim_type=data.get('simulation_type'),
             target_group=data.get('target_group'),
             launch_date=launch_date,
             completion_date=completion_date,
-            scheduled_at=datetime.utcnow()
+            scheduled_at=datetime.now(timezone.utc),
+            notification_email=data.get('notification_email')
         )
         db.session.add(scheduled)
         db.session.commit()
@@ -331,9 +379,11 @@ def predict_url():
         return render_template("detection.html", message="Error predicting URL.")
 
 @app.route('/get_scheduled_simulations', methods=['GET'])
+@login_required
 def get_scheduled_simulations():
     try:
-        scheduled = ScheduledSimulation.query.order_by(ScheduledSimulation.launch_date.asc()).all()
+        # Only show simulations for the current user
+        scheduled = ScheduledSimulation.query.filter_by(user_id=current_user.id).order_by(ScheduledSimulation.launch_date.asc()).all()
         return jsonify([s.to_dict() for s in scheduled])
     except Exception as e:
         logging.error(f"Error getting scheduled simulations: {e}")
@@ -341,10 +391,27 @@ def get_scheduled_simulations():
 
 def send_email_notification(sim):
     try:
+        # Get the user who created this simulation
+        user = User.query.get(sim.user_id)
+        if not user or not user.email:
+            logging.warning(f"No email found for user {sim.user_id}")
+            return
+            
+        # Check if email configuration is set
+        if not app.config.get('MAIL_USERNAME') or not app.config.get('MAIL_PASSWORD'):
+            logging.error("Email configuration is missing. Please check your environment variables.")
+            return
+        
+        # Create tracking URLs
+        tracking_pixel_url = f"http://127.0.0.1:5000/track_email_pixel/{sim.id}"
+        manual_confirm_url = f"http://127.0.0.1:5000/track_email_open/{sim.id}"
+        
         msg = Message(
             subject=f"Simulation Triggered: {sim.sim_type}",
-            recipients=['donaldmini10@gmail.com'],
+            recipients=[sim.notification_email],
             body=f"""
+Hello {user.username},
+
 A scheduled simulation has been triggered.
 
 Type: {sim.sim_type}
@@ -352,26 +419,83 @@ Target Group: {sim.target_group}
 Launch Date: {sim.launch_date}
 Completion Date: {sim.completion_date}
 Triggered At: {sim.triggered_at}
+
+To confirm you received this email, click here: {manual_confirm_url}
+
+Best regards,
+ThreatGuard Team
+""",
+            html=f"""
+<html>
+<body>
+<p>Hello {user.username},</p>
+
+<p>A scheduled simulation has been triggered.</p>
+
+<p><strong>Type:</strong> {sim.sim_type}<br>
+<strong>Target Group:</strong> {sim.target_group}<br>
+<strong>Launch Date:</strong> {sim.launch_date}<br>
+<strong>Completion Date:</strong> {sim.completion_date}<br>
+<strong>Triggered At:</strong> {sim.triggered_at}</p>
+
+<p><a href="{manual_confirm_url}" style="background-color: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Confirm Email Received</a></p>
+
+<p>Best regards,<br>
+ThreatGuard Team</p>
+
+<!-- Tracking pixel - invisible image that tracks when email is opened -->
+<img src="{tracking_pixel_url}" width="1" height="1" style="display:none;" alt="" />
+</body>
+</html>
 """
         )
         mail.send(msg)
-        logging.info(f"Notification email sent for simulation {sim.id}")
+        logging.info(f"Notification email sent to {sim.notification_email} for simulation {sim.id}")
     except Exception as e:
         logging.error(f"Error sending notification email: {e}")
+        print(f"Email error details: {e}")
 
 def trigger_due_simulations():
-    with app.app_context():
-        now = datetime.utcnow().date()
-        due = ScheduledSimulation.query.filter(
-            ScheduledSimulation.launch_date <= now,
-            not ScheduledSimulation.triggered
-        ).all()
-        for sim in due:
-            sim.triggered = True
-            sim.triggered_at = datetime.utcnow()
-            db.session.commit()
-            logging.info(f"Triggered simulation: {sim.id} ({sim.sim_type}) for {sim.target_group}")
-            send_email_notification(sim)
+    try:
+        with app.app_context():
+            # Use timezone-aware datetime instead of deprecated utcnow()
+            now = datetime.now(timezone.utc).date()
+            print(f"Checking for due simulations on {now}")
+            
+            # Get all simulations to debug
+            all_simulations = ScheduledSimulation.query.all()
+            print(f"Total simulations in database: {len(all_simulations)}")
+            
+            for sim in all_simulations:
+                print(f"Sim ID {sim.id}: launch_date={sim.launch_date}, triggered={sim.triggered}, notification_email={sim.notification_email}")
+            
+            due = ScheduledSimulation.query.filter(
+                ScheduledSimulation.launch_date <= now,
+                ScheduledSimulation.triggered == False
+            ).all()
+            
+            print(f"Found {len(due)} due simulations")
+            
+            for sim in due:
+                try:
+                    print(f"Triggering simulation ID {sim.id}: {sim.sim_type} for {sim.target_group}")
+                    sim.triggered = True
+                    sim.triggered_at = datetime.now(timezone.utc)
+                    db.session.commit()
+                    logging.info(f"Triggered simulation: {sim.id} ({sim.sim_type}) for {sim.target_group}")
+                    
+                    # Send email notification
+                    send_email_notification(sim)
+                    print(f"✓ Email sent to {sim.notification_email}")
+                    
+                except Exception as e:
+                    logging.error(f"Error processing simulation {sim.id}: {e}")
+                    print(f"✗ Error processing simulation {sim.id}: {e}")
+                    db.session.rollback()
+                    
+    except Exception as e:
+        logging.error(f"Error in trigger_due_simulations: {e}")
+        print(f"Scheduler error: {e}")
 
 # Start the scheduler
 scheduler = BackgroundScheduler()
@@ -389,14 +513,19 @@ def load_user(user_id):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
+        username_or_email = request.form['username']
         password = request.form['password']
-        user = User.query.filter_by(username=username).first()
+        
+        # Try to find user by username first, then by email
+        user = User.query.filter_by(username=username_or_email).first()
+        if not user:
+            user = User.query.filter_by(email=username_or_email).first()
+        
         if user and user.check_password(password):
             login_user(user)
             return redirect(url_for('home'))  # Redirect to landing page
         else:
-            return render_template('login.html', error='Invalid username or password')
+            return render_template('login.html', error='Invalid username/email or password')
     return render_template('login.html')
 
 @app.route('/logout')
@@ -422,20 +551,298 @@ def is_valid_password(password):
 def register():
     if request.method == 'POST':
         username = request.form['username']
+        email = request.form['email']
         password = request.form['password']
+        
+        # Validate email format
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            return render_template('register.html', error='Please enter a valid email address.')
+        
         if not is_valid_password(password):
             return render_template('register.html', error='Password must be at least 8 characters long and include uppercase, lowercase, numbers, and special characters.')
+        
         if User.query.filter_by(username=username).first():
             return render_template('register.html', error='Username already exists')
-        user = User(username=username)
+        
+        if User.query.filter_by(email=email).first():
+            return render_template('register.html', error='Email already registered')
+        
+        user = User(username=username, email=email)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
         return redirect(url_for('login'))
     return render_template('register.html')
 
+@app.route('/test_email')
+@login_required
+def test_email():
+    """Test route to check if email configuration is working"""
+    try:
+        # Check email configuration
+        email_config = {
+            'MAIL_SERVER': app.config.get('MAIL_SERVER'),
+            'MAIL_PORT': app.config.get('MAIL_PORT'),
+            'MAIL_USE_TLS': app.config.get('MAIL_USE_TLS'),
+            'MAIL_USERNAME': app.config.get('MAIL_USERNAME'),
+            'MAIL_PASSWORD': '***' if app.config.get('MAIL_PASSWORD') else 'NOT SET',
+            'MAIL_DEFAULT_SENDER': app.config.get('MAIL_DEFAULT_SENDER')
+        }
+        
+        # Try to send a test email
+        if current_user.email:
+            msg = Message(
+                subject="Test Email from ThreatGuard",
+                recipients=[current_user.email],
+                body=f"""
+Hello {current_user.username},
+
+This is a test email to verify that the email configuration is working correctly.
+
+If you receive this email, the email system is properly configured.
+
+Best regards,
+ThreatGuard Team
+"""
+            )
+            mail.send(msg)
+            return jsonify({
+                'status': 'success',
+                'message': f'Test email sent to {current_user.email}',
+                'config': email_config
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'No email address found for current user',
+                'config': email_config
+            })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Email test failed: {str(e)}',
+            'config': email_config
+        })
+
+@app.route('/trigger_test_simulation')
+@login_required
+def trigger_test_simulation():
+    """Manually trigger a test simulation to test email notifications"""
+    try:
+        # Create a test simulation
+        test_sim = ScheduledSimulation(
+            user_id=current_user.id,
+            sim_type="Test Phishing Simulation",
+            target_group="Test Group",
+            launch_date=datetime.now(timezone.utc).date(),
+            completion_date=(datetime.now(timezone.utc) + timedelta(days=1)).date(),
+            scheduled_at=datetime.now(timezone.utc),
+            triggered=True,
+            triggered_at=datetime.now(timezone.utc),
+            notification_email=current_user.email
+        )
+        
+        # Send email notification
+        send_email_notification(test_sim)
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Test simulation triggered and email sent to {current_user.email}'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Test simulation failed: {str(e)}'
+        })
+
+@app.route('/track_email_pixel/<int:simulation_id>')
+def track_email_pixel(simulation_id):
+    """Track email opens via invisible pixel"""
+    try:
+        # Get the simulation
+        simulation = ScheduledSimulation.query.get(simulation_id)
+        if not simulation:
+            return "Not found", 404
+        
+        # Mark as opened if not already opened
+        if not simulation.email_opened:
+            simulation.email_opened = True
+            simulation.email_opened_at = datetime.now(timezone.utc)
+            
+            # Add email open record
+            email_open = EmailOpen(
+                simulation_id=simulation_id,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', '')
+            )
+            db.session.add(email_open)
+            
+            db.session.commit()
+            logging.info(f"Email automatically marked as opened for simulation {simulation_id}")
+        
+        # Return a 1x1 transparent GIF pixel
+        pixel_data = b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00\x21\xf9\x04\x01\x00\x00\x00\x00\x2c\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02\x44\x01\x00\x3b'
+        
+        response = app.response_class(pixel_data, mimetype='image/gif')
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+        
+    except Exception as e:
+        logging.error(f"Error tracking email pixel: {e}")
+        # Still return the pixel even if tracking fails
+        pixel_data = b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00\x21\xf9\x04\x01\x00\x00\x00\x00\x2c\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02\x44\x01\x00\x3b'
+        return app.response_class(pixel_data, mimetype='image/gif')
+
+@app.route('/track_email_open/<int:simulation_id>')
+def track_email_open(simulation_id):
+    try:
+        # Get the simulation
+        simulation = ScheduledSimulation.query.get(simulation_id)
+        if not simulation:
+            return "Simulation not found", 404
+        
+        # Record the email open
+        email_open = EmailOpen(
+            simulation_id=simulation_id,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent', '')
+        )
+        db.session.add(email_open)
+        
+        # Mark the simulation as email opened (if not already opened)
+        if not simulation.email_opened:
+            simulation.email_opened = True
+            simulation.email_opened_at = datetime.now(timezone.utc)
+        
+        db.session.commit()
+        
+        # Return a confirmation page
+        return f"""
+        <html>
+        <head>
+            <title>Email Confirmed</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; text-align: center; padding: 50px; }}
+                .success {{ color: #2ecc71; font-size: 24px; margin-bottom: 20px; }}
+                .message {{ color: #333; font-size: 16px; }}
+            </style>
+        </head>
+        <body>
+            <div class="success">✓ Email Confirmed!</div>
+            <div class="message">
+                Thank you for confirming receipt of the simulation notification.<br>
+                Simulation ID: {simulation_id}<br>
+                Type: {simulation.sim_type}<br>
+                Confirmed at: {simulation.email_opened_at.strftime('%Y-%m-%d %H:%M:%S') if simulation.email_opened_at else 'Now'}
+            </div>
+        </body>
+        </html>
+        """
+        
+    except Exception as e:
+        logging.error(f"Error tracking email open: {e}")
+        return "Error processing confirmation", 500
+
+@app.route('/test_mark_opened/<int:simulation_id>')
+def test_mark_opened(simulation_id):
+    """Test route to manually mark an email as opened"""
+    try:
+        # Get the simulation
+        simulation = ScheduledSimulation.query.get(simulation_id)
+        if not simulation:
+            return f"Simulation {simulation_id} not found", 404
+        
+        # Mark as opened if not already opened
+        if not simulation.email_opened:
+            simulation.email_opened = True
+            simulation.email_opened_at = datetime.now(timezone.utc)
+            
+            # Add email open record
+            email_open = EmailOpen(
+                simulation_id=simulation_id,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', '')
+            )
+            db.session.add(email_open)
+            
+            db.session.commit()
+            
+            return f"""
+            <html>
+            <head><title>Email Marked as Opened</title></head>
+            <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+                <h2 style="color: #2ecc71;">✓ Email Marked as Opened!</h2>
+                <p>Simulation ID: {simulation_id}</p>
+                <p>Type: {simulation.sim_type}</p>
+                <p>Marked at: {simulation.email_opened_at.strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p><a href="javascript:window.close()">Close this window</a></p>
+            </body>
+            </html>
+            """
+        else:
+            return f"""
+            <html>
+            <head><title>Already Opened</title></head>
+            <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+                <h2 style="color: #f39c12;">Email Already Marked as Opened</h2>
+                <p>Simulation ID: {simulation_id}</p>
+                <p>Opened at: {simulation.email_opened_at.strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p><a href="javascript:window.close()">Close this window</a></p>
+            </body>
+            </html>
+            """
+        
+    except Exception as e:
+        logging.error(f"Error in test_mark_opened: {e}")
+        return f"Error: {str(e)}", 500
+
+@app.route('/mark_email_opened/<int:simulation_id>', methods=['POST'])
+@login_required
+def mark_email_opened(simulation_id):
+    """Manually mark an email as opened"""
+    try:
+        # Get the simulation
+        simulation = ScheduledSimulation.query.get(simulation_id)
+        if not simulation:
+            return jsonify({'status': 'error', 'message': 'Simulation not found'}), 404
+        
+        # Check if user has permission to modify this simulation
+        if simulation.user_id != current_user.id:
+            return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+        
+        # Mark as opened if not already opened
+        if not simulation.email_opened:
+            simulation.email_opened = True
+            simulation.email_opened_at = datetime.now(timezone.utc)
+            
+            # Add email open record
+            email_open = EmailOpen(
+                simulation_id=simulation_id,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', '')
+            )
+            db.session.add(email_open)
+            
+            db.session.commit()
+            
+            return jsonify({
+                'status': 'success',
+                'message': f'Email marked as opened for simulation {simulation_id}'
+            })
+        else:
+            return jsonify({
+                'status': 'info',
+                'message': f'Email was already marked as opened for simulation {simulation_id}'
+            })
+        
+    except Exception as e:
+        logging.error(f"Error marking email as opened: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 if __name__ == '__main__':
     with app.app_context():
-        # db.drop_all()  # Drop all tables (dev only!)
+        # db.drop_all()  # Drop all tables to recreate with new schema
         db.create_all()  # Recreate tables
     app.run(debug=True)
