@@ -1,4 +1,4 @@
-# Phishing Simulation & Detection Platform
+# Phishing Defense Platform
 
 A web application for simulating phishing attacks, raising awareness, and detecting phishing threats using AI. Built with Flask, SQLAlchemy, and Google Gemini AI.
 
