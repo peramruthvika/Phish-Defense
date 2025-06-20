@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, url_for, redirect, send_file
+from flask import Flask, render_template, request, jsonify, url_for, redirect
 import google.generativeai as genai
 import os
 import PyPDF2
@@ -15,7 +15,6 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_migrate import Migrate
 import re
-import io
 
 load_dotenv()
 
@@ -471,7 +470,7 @@ def trigger_due_simulations():
             
             due = ScheduledSimulation.query.filter(
                 ScheduledSimulation.launch_date <= now,
-                ScheduledSimulation.triggered == False
+                ~ScheduledSimulation.triggered
             ).all()
             
             print(f"Found {len(due)} due simulations")
